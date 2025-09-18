@@ -29,7 +29,7 @@ func AddWithOptions(branch string, path string, appendBranch bool) error {
 		branchPath = filepath.Join(gitPath, branch)
 	}
 
-	cmdArgs := []string{"worktree", "add", branchPath}
+	cmdArgs := []string{"worktree", "add", branchPath, branch}
 
 	_, err := git(cmdArgs)
 	return err
