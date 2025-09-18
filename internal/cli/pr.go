@@ -11,6 +11,8 @@ import (
 )
 
 func NewPr() *cobra.Command {
+	var appendBranch bool
+
 	cmd := &cobra.Command{
 		Use:     "pr [number] [path]",
 		Short:   "Will checkout the pr into a worktree branch",
@@ -38,9 +40,11 @@ func NewPr() *cobra.Command {
 				return err
 			}
 
-			return worktree.Add(branch, path)
+			return worktree.AddWithOptions(branch, path, appendBranch)
 		},
 	}
+
+	cmd.Flags().BoolVar(&appendBranch, "append-branch", false, "Append branch name as subdirectory to the provided path")
 
 	return cmd
 }
