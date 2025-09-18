@@ -11,7 +11,8 @@ import (
 func Add(branch string, path string) error {
 	var branchPath string
 	if path != "" {
-		branchPath = filepath.Join(path, branch)
+		// Use the path directly without appending branch name
+		branchPath = path
 	} else {
 		gitPath, err := getCommonGitDirectory()
 		if err != nil {
