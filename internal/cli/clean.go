@@ -174,6 +174,10 @@ func getWorktreeInfo() ([]WorktreeInfo, error) {
 	for _, line := range lines {
 		if strings.HasPrefix(line, "worktree ") {
 			if current.Path != "" {
+				// Before appending, ensure PR number is extracted
+				if current.PRNumber == 0 {
+					current.PRNumber = extractPRNumber(filepath.Base(current.Path))
+				}
 				worktrees = append(worktrees, current)
 			}
 			current = WorktreeInfo{
@@ -183,10 +187,25 @@ func getWorktreeInfo() ([]WorktreeInfo, error) {
 			current.Branch = strings.TrimPrefix(line, "branch refs/heads/")
 			// Try to extract PR number from branch name
 			current.PRNumber = extractPRNumber(current.Branch)
+			// If no PR number found in branch, try the path
+			if current.PRNumber == 0 {
+				current.PRNumber = extractPRNumber(filepath.Base(current.Path))
+			}
 		} else if line == "" && current.Path != "" {
+			// Before appending, ensure PR number is extracted
+			if current.PRNumber == 0 {
+				current.PRNumber = extractPRNumber(filepath.Base(current.Path))
+			}
 			worktrees = append(worktrees, current)
 			current = WorktreeInfo{}
 		}
+	}
+	// Handle last worktree if it exists
+	if current.Path != "" {
+		if current.PRNumber == 0 {
+			current.PRNumber = extractPRNumber(filepath.Base(current.Path))
+		}
+		worktrees = append(worktrees, current)
 	}
 
 	// Get last commit date for each worktree
@@ -202,18 +221,21 @@ func getWorktreeInfo() ([]WorktreeInfo, error) {
 	return worktrees, nil
 }
 
-func extractPRNumber(branch string) int {
-	// Common patterns: pr-123, pr/123, pull/123, 123-feature
+func extractPRNumber(text string) int {
+	// Common patterns: pr-123, pr/123, pull/123, 123-feature, web-frontend-pr-1018
+	// Check most specific patterns first
 	patterns := []string{
-		`^pr[-/]?(\d+)`,
-		`^pull[-/]?(\d+)`,
-		`^(\d+)[-_]`,
-		`[-_]pr[-_]?(\d+)`,
+		`[-_]pr[-_/](\d+)`,          // Matches -pr-123, _pr_123, -pr/123
+		`^pr[-_/](\d+)`,             // Matches pr-123, pr_123, pr/123 at start
+		`[-_]pull[-_/](\d+)`,        // Matches -pull-123, _pull_123
+		`^pull[-_/](\d+)`,           // Matches pull-123, pull_123 at start
+		`^(\d+)[-_]`,                // Matches 123-feature at start
+		`[-_](\d{4,})$`,             // Matches feature-1234 at end (4+ digits to avoid false positives)
 	}
 
 	for _, pattern := range patterns {
 		re := regexp.MustCompile(pattern)
-		if matches := re.FindStringSubmatch(branch); len(matches) > 1 {
+		if matches := re.FindStringSubmatch(text); len(matches) > 1 {
 			if num, err := strconv.Atoi(matches[1]); err == nil {
 				return num
 			}
