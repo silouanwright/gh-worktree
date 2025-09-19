@@ -15,6 +15,7 @@ func NewRoot() *cobra.Command {
 
 	cmd.AddCommand(NewClone())
 	cmd.AddCommand(NewPr())
+	cmd.AddCommand(NewClean())
 
 	return cmd
 }
